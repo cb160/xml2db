@@ -7,6 +7,7 @@ from uuid import uuid4
 import hashlib
 
 import xmlschema
+from xmlschema.validators import XsdAnyElement
 import sqlalchemy
 from lxml import etree
 from sqlalchemy import MetaData, create_engine, inspect
@@ -437,27 +438,7 @@ class DataModel:
                 # with multiple occurrence when generating XML. For instance, if we have a sequence A, B with
                 # max occur > 1, we want to generate A, B, A, B and not A, A, B, B, thus we mark A and B as member of
                 # the same "ngroup", which will be used when generating XML
-                if (
-                    len(nested_containers) > 1
-                    and child.parent == nested_containers[-2][0]
-                ):
-                    nested_containers.pop()
-                elif (
-                    len(nested_containers) == 0
-                    or child.parent != nested_containers[-1][0]
-                ):
-                    nested_containers.append(
-                        (
-                            child.parent,
-                            (
-                                str(hash(child.parent))
-                                if child.parent
-                                and child.parent.max_occurs != 1
-                                and child.parent.model != "choice"
-                                else None
-                            ),
-                        )
-                    )
+                self.manage_nested_containers(nested_containers, child)
                 ct = child.type
                 if (
                     ct.is_complex()
@@ -510,6 +491,10 @@ class DataModel:
                         )
                 else:
                     raise ValueError("unknown case; please check")
+            elif isinstance(child, XsdAnyElement):
+                # Handle the XsdAnyElement case here
+                # Skip for now
+                pass
             else:
                 raise ValueError("unknown case; please check (child not an XsdElement)")
 
@@ -540,6 +525,29 @@ class DataModel:
             )
 
         return parent_table
+
+    def manage_nested_containers(self, nested_containers, child):
+        if (
+                    len(nested_containers) > 1
+                    and child.parent == nested_containers[-2][0]
+                ):
+            nested_containers.pop()
+        elif (
+                    len(nested_containers) == 0
+                    or child.parent != nested_containers[-1][0]
+                ):
+            nested_containers.append(
+                        (
+                            child.parent,
+                            (
+                                str(hash(child.parent))
+                                if child.parent
+                                and child.parent.max_occurs != 1
+                                and child.parent.model != "choice"
+                                else None
+                            ),
+                        )
+                    )
 
     def _repr_tree(
         self,
