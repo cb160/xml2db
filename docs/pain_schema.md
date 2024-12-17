@@ -1,4 +1,5 @@
-```mermaid erDiagram
+```mermaid
+erDiagram
     Document ||--o| PstlAdr : "InitgPty_PstlAdr"
     Document ||--o| Id : "InitgPty_Id"
     Document ||--o| CtctDtls : "InitgPty_CtctDtls"
